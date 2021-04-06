@@ -1,0 +1,146 @@
+﻿@model List<Common_MVC_Project.Models.myModel>
+@{
+    Layout = null;
+}
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+    <style type=text/css>
+        .buttonInTable {
+            background: #FFFFFF;
+            font-family: Arial;
+            font-size: XX-Large;
+            width: 60px;
+            height: 60px;
+        }
+    </style>
+
+
+</head>
+<body>
+    <div>
+        <table>
+            @for (int i = 0; i < 4; i++)
+            {
+                <tr>
+                    @for (int j = 0; j < 4; j++)
+                    {
+                        <td>
+                            <input type="button" id="@(4 * i + j)" onClick="myClick()" class='buttonInTable' />
+                        </td>
+                    }
+                </tr>
+            }
+        </table>
+        <label id="winLabel" style="transform:translate(0px,250px);position:absolute">
+            You Won!!!
+        </label>
+        <button type="button" onclick="shuffle()" value="New Game" style="transform:translate(100px,250px);position:absolute">
+            New game
+        </button>
+    </div>
+        </body>
+</html>
+
+<script type="text/javascript">
+    var xmlHttp;
+    var emptyIndex;
+    window.onload = shuffle;
+
+    function shuffle() {
+        if (window.ActiveXObject)
+            xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+        else if (window.XMLHttpRequest)
+            xmlHttp = new XMLHttpRequest();
+
+        var url = '@Url.Action("ShuffleAction", "my")';
+        xmlHttp.open("Get", url, true);
+        xmlHttp.onreadystatechange = () => {
+            if (xmlHttp.readyState != 4)
+                return
+            var myJsonObject = JSON.parse(xmlHttp.responseText)
+            for (var i = 0; i < 16; i++) {
+                var tempButton = document.getElementById(i);
+                tempButton.disabled = false;
+                tempButton.value = myJsonObject[i].Text;
+                tempButton.style.backgroundColor = `rgb(${myJsonObject[i].R},${myJsonObject[i].G},${myJsonObject[i].B})`;
+                tempButton.style.display = 'block';
+            }
+            emptyIndex = 15;
+            document.getElementById(15).style.display = 'none';
+            document.body.style.backgroundColor = document.getElementById(15).style.backgroundColor;
+            document.getElementById('winLabel').style.display = 'none';
+        };
+        xmlHttp.send();
+    }
+
+    function myClick() {
+        var ID = event.srcElement.id;
+        var txt = document.getElementById(ID).value;
+        if (window.ActiveXObject)
+            xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+        else if (window.XMLHttpRequest)
+            xmlHttp = new XMLHttpRequest();
+        var jsonBackground = {
+            'R': parseInt(document.body.style.backgroundColor.split('(')[1].split(')')[0].split(',')[0].trim()),
+            'G': parseInt(document.body.style.backgroundColor.split('(')[1].split(')')[0].split(',')[1].trim()),
+            'B': parseInt(document.body.style.backgroundColor.split('(')[1].split(')')[0].split(',')[2].trim()),
+            'text': '',
+        };
+        var jsonButton = {
+            'R': parseInt(document.getElementById(ID).style.backgroundColor.split('(')[1].split(')')[0].split(',')[0].trim()),
+            'G': parseInt(document.getElementById(ID).style.backgroundColor.split('(')[1].split(')')[0].split(',')[1].trim()),
+            'B': parseInt(document.getElementById(ID).style.backgroundColor.split('(')[1].split(')')[0].split(',')[2].trim()),
+            'text': '',
+        };
+        var url = `@Url.Action("NextStepAction", "my")?index=${ID}&empty=${emptyIndex}&background=${JSON.stringify(jsonBackground)}&button=${JSON.stringify(jsonButton)}`;
+        xmlHttp.open('GET', url, true);
+        xmlHttp.onreadystatechange = () => {
+            if (xmlHttp.readyState != 4)
+                return;
+            var answer = JSON.parse(xmlHttp.responseText);
+            if (answer.Text === 'false')
+                return;
+            document.getElementById(ID).style.display = 'none';
+            document.getElementById(emptyIndex).style.display = 'block';
+            document.getElementById(emptyIndex).style.backgroundColor = document.getElementById(ID).style.backgroundColor;
+            document.getElementById(emptyIndex).value = document.getElementById(ID).value;
+            emptyIndex = ID;
+            document.body.style.backgroundColor = `rgb(${answer.R},${answer.G},${answer.B})`;
+            isGameOver();
+        }
+        xmlHttp.send();
+    }
+
+    function isGameOver() {
+        if (window.ActiveXObject)
+            xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+        else if (window.XMLHttpRequest)
+            xmlHttp = new XMLHttpRequest();
+        var buttons = [];
+        for (var i = 0; i < 16; i++) {
+            buttons.push({
+                'R': 0,
+                'G': 0,
+                'B': 0,
+                'text': document.getElementById(i).value
+            });
+        }
+        var url = `@Url.Action("IsGameOverAction","my")?data=${JSON.stringify(buttons)}`;
+        xmlHttp.open('GET', url, true);
+        xmlHttp.onreadystatechange = () => {
+            if (xmlHttp.readyState != 4)
+                return;
+            answer = JSON.parse(xmlHttp.response);
+            if (!answer)
+                return;
+            document.getElementById('winLabel').style.display = "block";
+            for (var i = 0; i < 16; i++)
+                document.getElementById(i).disabled = true;
+        };
+        xmlHttp.send();
+    }
+
+</script>
